@@ -119,39 +119,32 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
             </div>
 
             {visibleMatches.length > 0 && (
-              <article>
-                <div className="divide-y divide-white/8">
-                  {visibleMatches.map((match) => (
-                    <Link href={`/matches/${match.id}`} key={match.id} className="flex items-center gap-2 px-4 py-4 transition hover:bg-white/[.03] sm:px-5">
-                      <div className="w-10 shrink-0 text-center sm:w-12">
-                        {match.status !== "SCHEDULED" ? (
-                          <span className="inline-block rounded-full bg-white/10 px-2 py-1 text-[9px] font-medium uppercase tracking-widest text-white/60">
-                            {match.status === "FINISHED" ? "FT" : match.status.substring(0, 3)}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="flex flex-1 items-center gap-3">
-                        <div className="flex flex-1 items-center justify-end gap-3 text-right">
-                          <span className="truncate text-sm font-medium sm:text-base">{match.homeTeam.name}</span>
+              <div className="overflow-hidden rounded-3xl bg-[#1d1d1d]">
+                <div>
+                  {visibleMatches.map((match) => {
+                    const live = ["FIRST_HALF", "SECOND_HALF", "HALF_TIME", "EXTRA_TIME", "PENALTIES", "IN_PROGRESS"].includes(match.status);
+                    const done = Boolean(match.result) || match.status === "COMPLETED";
+                    const time = match.scheduledAt ? new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(match.scheduledAt)) : "TBD";
+                    return (
+                      <Link href={`/matches/${match.id}`} key={match.id} className="grid grid-cols-[3rem_1fr_3rem] items-center gap-2 border-t border-[#2a2a2a] px-4 py-4 transition first:border-t-0 hover:bg-white/[.03] sm:px-5">
+                        <span className="grid h-8 min-w-[3rem] place-items-center justify-self-start px-2 text-[11px] font-bold text-white/60">
+                          {live ? <span className="rounded-full bg-[#dd3636]/15 px-2 py-1 text-[#ff6a6a]">LIVE</span> : done ? <span className="rounded-full bg-[#393939] px-2 py-1">FT</span> : null}
+                        </span>
+                        <div className="grid grid-cols-[1fr_auto_auto_auto_1fr] items-center gap-2 sm:gap-3">
+                          <span className="truncate text-right text-sm font-medium sm:text-base">{match.homeTeam.name}</span>
                           <TeamMark team={match.homeTeam} />
-                        </div>
-                        <div className="min-w-[4rem] text-center sm:min-w-[5rem]">
-                          {match.result ? (
-                            <b className="text-base sm:text-lg">{match.result.homeScore} <span className="text-white/50 px-0.5">-</span> {match.result.awayScore}</b>
-                          ) : (
-                            <b className="text-xs text-white/50 sm:text-sm">{match.scheduledAt && new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(match.scheduledAt))}</b>
-                          )}
-                        </div>
-                        <div className="flex flex-1 items-center gap-3">
+                          <span className="min-w-[3rem] text-center text-sm font-bold tabular-nums sm:text-base">
+                            {done || live ? <>{match.result?.homeScore ?? 0}<span className="px-1 text-white/30">-</span>{match.result?.awayScore ?? 0}</> : <span className="text-xs font-semibold text-white/45">{time}</span>}
+                          </span>
                           <TeamMark team={match.awayTeam} />
-                          <span className="truncate text-sm font-medium sm:text-base">{match.awayTeam.name}</span>
+                          <span className="truncate text-left text-sm font-medium sm:text-base">{match.awayTeam.name}</span>
                         </div>
-                      </div>
-                      <div className="w-6 shrink-0"></div>
-                    </Link>
-                  ))}
+                        <span />
+                      </Link>
+                    );
+                  })}
                 </div>
-              </article>
+              </div>
             )}
             {!visibleMatches.length && <EmptyState title={`No matches on ${dateLabel(selectedKey)}`} body="No fixtures for this day. Use the arrows to browse other days." />}
           </section>
