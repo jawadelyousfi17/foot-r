@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useTransition, type ReactNode } from "react";
 
 export function MatchCountdown({ kickoff }: { kickoff: string | null }) {
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -34,9 +34,7 @@ export function FollowButton() {
   return (
     <button
       onClick={() => setFollowing((value) => !value)}
-      className={`rounded-full px-5 py-2 text-sm font-bold transition ${
-        following ? "bg-white/15 text-white" : "bg-white text-black hover:bg-white/90"
-      }`}
+      className="rounded-full bg-white px-5 py-2 text-sm font-bold text-black transition hover:bg-white/90"
     >
       {following ? "Following" : "Follow"}
     </button>
@@ -129,31 +127,36 @@ function VoteBar({ label, value, active }: { label: string; value: number; activ
   );
 }
 
-export function MatchTabs({
-  tabs,
-}: {
-  tabs: Array<{ label: string; content: ReactNode }>;
-}) {
+type Tab = { label: string; content: ReactNode };
+const TabsContext = createContext<{ active: number; setActive: (n: number) => void; tabs: Tab[] } | null>(null);
+
+export function MatchTabsProvider({ tabs, children }: { tabs: Tab[]; children: ReactNode }) {
   const [active, setActive] = useState(0);
+  return <TabsContext.Provider value={{ active, setActive, tabs }}>{children}</TabsContext.Provider>;
+}
+
+export function MatchTabsNav() {
+  const ctx = useContext(TabsContext);
+  if (!ctx) return null;
+  const { active, setActive, tabs } = ctx;
   return (
-    <div>
-      <div className="flex gap-6 border-b border-white/8 px-1">
-        {tabs.map((tab, index) => (
-          <button
-            key={tab.label}
-            onClick={() => setActive(index)}
-            className={`relative -mb-px py-3 text-sm font-bold transition ${
-              active === index ? "text-white" : "text-white/45 hover:text-white/70"
-            }`}
-          >
-            {tab.label}
-            {active === index && (
-              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-[#00c281]" />
-            )}
-          </button>
-        ))}
-      </div>
-      <div className="pt-5">{tabs[active]?.content}</div>
+    <div className="flex gap-6 px-1">
+      {tabs.map((tab, index) => (
+        <button
+          key={tab.label}
+          onClick={() => setActive(index)}
+          className={`relative py-3 text-sm font-bold transition ${active === index ? "text-white" : "text-white/45 hover:text-white/70"}`}
+        >
+          {tab.label}
+          {active === index && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[#61df6e]" />}
+        </button>
+      ))}
     </div>
   );
+}
+
+export function MatchTabsContent() {
+  const ctx = useContext(TabsContext);
+  if (!ctx) return null;
+  return <>{ctx.tabs[ctx.active]?.content}</>;
 }

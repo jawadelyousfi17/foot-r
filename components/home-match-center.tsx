@@ -87,9 +87,8 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
     <main className="min-h-[calc(100vh-4rem)] bg-black px-3 py-5 text-white sm:px-5 sm:py-8">
       <div className="mx-auto max-w-5xl">
         <section>
-          <div className="flex items-center gap-2 px-1">
-            <Icon name="trophy" size={22} className="text-[#61df6e]" />
-            <h1 className="text-xl font-medium sm:text-2xl">{competition?.name ?? "Match center"}</h1>
+          <div className="px-1">
+            <h1 className="w-fit bg-gradient-to-r from-[#61df6e] via-[#33c771] to-[#3aa7ff] bg-clip-text text-2xl font-semibold tracking-tight text-transparent sm:text-3xl">{competition?.name ?? "Match center"}</h1>
           </div>
           <div className="mt-4 flex gap-7 border-b border-white/8 px-1">
             {(["matches", "standings", "knockout"] as const).map((tab) => (
