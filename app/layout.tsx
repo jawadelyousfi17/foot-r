@@ -4,6 +4,7 @@ import NextTopLoader from "nextjs-toploader";
 import { auth, signOut } from "@/lib/auth";
 import { Icon } from "@/components/icon";
 import { MobileNav } from "@/components/mobile-nav";
+import { DesktopModeBanner } from "@/components/desktop-mode-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default async function RootLayout({
     <html lang="en" className="dark h-full antialiased">
       <body className="min-h-full bg-black text-foreground">
         <NextTopLoader color="#61df6e" height={3} shadow="0 0 10px #61df6e,0 0 5px #61df6e" showSpinner={false} />
+        <DesktopModeBanner />
         <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0d0d0d]/95 backdrop-blur-xl">
           <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 lg:h-[72px] lg:gap-8 lg:px-8">
             <Link href="/" className="flex shrink-0 items-center" aria-label="Foot-R home">
