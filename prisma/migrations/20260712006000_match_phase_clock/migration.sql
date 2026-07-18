@@ -1,0 +1,1 @@
+ALTER TABLE "Match" ADD COLUMN "phaseStartedAt" TIMESTAMP(3);
