@@ -86,16 +86,20 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-black px-3 py-5 text-white sm:px-5 sm:py-8">
       <div className="mx-auto max-w-5xl">
-        <section>
-          <div className="px-1">
-            <h1 className="w-fit bg-gradient-to-r from-[#61df6e] via-[#33c771] to-[#3aa7ff] bg-clip-text text-2xl font-semibold tracking-tight text-transparent sm:text-3xl">{competition?.name ?? "Match center"}</h1>
+        <section className="overflow-hidden rounded-[28px] bg-[#1b1b1b]">
+          <div
+            className="relative px-5 pb-5 pt-7 sm:px-8 sm:pt-8"
+            style={{ backgroundImage: "linear-gradient(90deg,rgba(16,42,28,.82) 0%,rgba(33,46,35,.5) 34%,rgba(23,43,77,.42) 62%,rgba(17,53,143,.38) 100%), linear-gradient(108deg,#24442d 0%,#2f5a3c 24%,#2e4159 52%,#183e98 78%,#182e77 100%)" }}
+          >
+            <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{competition?.name ?? "Match center"}</h1>
+            <p className="mt-1 text-sm font-medium text-white/70">Summer football</p>
           </div>
-          <div className="mt-4 flex gap-7 border-b border-white/8 px-1">
+          <div className="flex gap-7 px-5 sm:px-8">
             {(["matches", "standings", "knockout"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setView(tab)}
-                className={`relative -mb-px pb-3 text-sm font-medium capitalize transition sm:text-base ${view === tab ? "text-white" : "text-white/50 hover:text-white/80"}`}
+                className={`relative py-3.5 text-sm font-medium capitalize transition sm:text-base ${view === tab ? "text-white" : "text-white/50 hover:text-white/80"}`}
               >
                 {tab}
                 {view === tab && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[#61df6e]" />}
@@ -126,20 +130,23 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
                     const done = Boolean(match.result) || match.status === "COMPLETED";
                     const time = match.scheduledAt ? new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(match.scheduledAt)) : "TBD";
                     return (
-                      <Link href={`/matches/${match.id}`} key={match.id} className="grid grid-cols-[3rem_1fr_3rem] items-center gap-2 border-t border-[#2a2a2a] px-4 py-4 transition first:border-t-0 hover:bg-white/[.03] sm:px-5">
-                        <span className="grid h-8 min-w-[3rem] place-items-center justify-self-start px-2 text-[11px] font-bold text-white/60">
+                      <Link href={`/matches/${match.id}`} key={match.id} className="flex items-center gap-2 border-t border-[#2a2a2a] px-3 py-4 transition first:border-t-0 hover:bg-white/[.03] sm:px-5">
+                        <span className="grid h-8 w-11 shrink-0 place-items-center text-[10px] font-bold text-white/60">
                           {live ? <span className="rounded-full bg-[#dd3636]/15 px-2 py-1 text-[#ff6a6a]">LIVE</span> : done ? <span className="rounded-full bg-[#393939] px-2 py-1">FT</span> : null}
                         </span>
-                        <div className="grid grid-cols-[1fr_auto_auto_auto_1fr] items-center gap-2 sm:gap-3">
-                          <span className="truncate text-right text-sm font-medium sm:text-base">{match.homeTeam.name}</span>
-                          <TeamMark team={match.homeTeam} />
+                        <div className="grid flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
+                          <span className="flex min-w-0 items-center justify-end gap-2 text-right">
+                            <span className="truncate text-sm font-medium sm:text-base">{match.homeTeam.name}</span>
+                            <TeamMark team={match.homeTeam} />
+                          </span>
                           <span className="min-w-[3rem] text-center text-sm font-bold tabular-nums sm:text-base">
                             {done || live ? <>{match.result?.homeScore ?? 0}<span className="px-1 text-white/30">-</span>{match.result?.awayScore ?? 0}</> : <span className="text-xs font-semibold text-white/45">{time}</span>}
                           </span>
-                          <TeamMark team={match.awayTeam} />
-                          <span className="truncate text-left text-sm font-medium sm:text-base">{match.awayTeam.name}</span>
+                          <span className="flex min-w-0 items-center gap-2">
+                            <TeamMark team={match.awayTeam} />
+                            <span className="truncate text-sm font-medium sm:text-base">{match.awayTeam.name}</span>
+                          </span>
                         </div>
-                        <span />
                       </Link>
                     );
                   })}
@@ -153,29 +160,29 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
             {competitions.flatMap((competition) => competition.tables.map((table) => (
               <article key={table.id}>
                 <div className="flex items-center gap-2 px-4 py-4 sm:px-2"><span className="font-medium">{table.name}</span></div>
-                <div className="overflow-x-auto">
-                  <div className="min-w-[34rem]">
-                    <div className="grid grid-cols-[2.25rem_1fr_repeat(7,2.4rem)] items-center px-4 py-2.5 text-[11px] uppercase tracking-wide text-white/40 sm:px-6">
-                      <span>#</span><span>Team</span>
-                      <span className="text-center">PL</span><span className="text-center">W</span><span className="text-center">D</span><span className="text-center">L</span><span className="text-center">+/-</span><span className="text-center">GD</span><span className="text-center">PTS</span>
-                    </div>
-                    {table.rows.map((row) => (
-                      <div key={row.team.id} className="grid grid-cols-[2.25rem_1fr_repeat(7,2.4rem)] items-center border-t border-white/8 px-4 py-3 text-sm text-white/70 transition hover:bg-white/[.03] sm:px-6">
-                        <span className="flex items-center gap-2.5">
-                          <span className={`h-4 w-0.5 rounded-full ${row.position <= 2 ? "bg-[#00985f]" : row.position === 3 ? "bg-[#f08022]" : "bg-transparent"}`} />
-                          <span className="text-white/50">{row.position}</span>
-                        </span>
-                        <Link href={`/teams/${row.team.slug}`} className="flex min-w-0 items-center gap-2.5 text-white hover:underline"><TeamMark team={row.team} /><span className="truncate">{row.team.name}</span></Link>
-                        <span className="text-center">{row.played}</span>
-                        <span className="text-center">{row.won}</span>
-                        <span className="text-center">{row.drawn}</span>
-                        <span className="text-center">{row.lost}</span>
-                        <span className="text-center tabular-nums">{row.goalsFor}-{row.goalsAgainst}</span>
-                        <span className="text-center tabular-nums">{row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}</span>
-                        <b className="text-center text-white">{row.points}</b>
-                      </div>
-                    ))}
+                <div>
+                  <div className="grid grid-cols-[1.75rem_1fr_repeat(3,2.2rem)] items-center px-4 py-2.5 text-[11px] uppercase tracking-wide text-white/40 sm:grid-cols-[2.25rem_1fr_repeat(7,2.4rem)] sm:px-6">
+                    <span>#</span><span>Team</span>
+                    <span className="text-center">PL</span>
+                    <span className="hidden text-center sm:block">W</span><span className="hidden text-center sm:block">D</span><span className="hidden text-center sm:block">L</span><span className="hidden text-center sm:block">+/-</span>
+                    <span className="text-center">GD</span><span className="text-center">PTS</span>
                   </div>
+                  {table.rows.map((row) => (
+                    <div key={row.team.id} className="grid grid-cols-[1.75rem_1fr_repeat(3,2.2rem)] items-center border-t border-white/8 px-4 py-3 text-sm text-white/70 transition hover:bg-white/[.03] sm:grid-cols-[2.25rem_1fr_repeat(7,2.4rem)] sm:px-6">
+                      <span className="flex items-center gap-2">
+                        <span className={`h-4 w-0.5 rounded-full ${row.position <= 2 ? "bg-[#00985f]" : row.position === 3 ? "bg-[#f08022]" : "bg-transparent"}`} />
+                        <span className="text-white/50">{row.position}</span>
+                      </span>
+                      <Link href={`/teams/${row.team.slug}`} className="flex min-w-0 items-center gap-2.5 text-white hover:underline"><TeamMark team={row.team} /><span className="truncate">{row.team.name}</span></Link>
+                      <span className="text-center">{row.played}</span>
+                      <span className="hidden text-center sm:block">{row.won}</span>
+                      <span className="hidden text-center sm:block">{row.drawn}</span>
+                      <span className="hidden text-center sm:block">{row.lost}</span>
+                      <span className="hidden text-center tabular-nums sm:block">{row.goalsFor}-{row.goalsAgainst}</span>
+                      <span className="text-center tabular-nums">{row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}</span>
+                      <b className="text-center text-white">{row.points}</b>
+                    </div>
+                  ))}
                 </div>
                 {!table.rows.length && <p className="border-t border-white/8 px-6 py-8 text-center text-sm text-white/35">No teams in this group yet.</p>}
               </article>

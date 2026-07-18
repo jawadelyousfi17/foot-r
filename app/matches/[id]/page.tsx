@@ -119,7 +119,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 <span className="max-w-[46vw] truncate text-sm font-normal tracking-tight sm:max-w-md sm:text-xl">{match.competition.name}</span>
               </div>
 
-              <div className="mt-9 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm font-medium text-[#a5a5a8] sm:mt-11 sm:text-base">
+              <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm font-medium text-[#a5a5a8] sm:mt-11 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-8 sm:text-base">
                 <Meta icon="calendar" text={date ? new Intl.DateTimeFormat("en", { weekday: "short", month: "long", day: "numeric" }).format(date) + `, ${kickoffTime}` : "Date TBD"} />
                 <Meta icon="location" text={match.venue || "1337 Campus"} />
                 {match.refereeName && <Meta icon="whistle" text={match.refereeName} />}
@@ -199,14 +199,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 }
 
 function Meta({ icon, text }: { icon: IconName; text: string }) {
-  return <span className="flex items-center gap-1.5"><Icon name={icon} size={16} className="text-white/45" />{text}</span>;
+  return <span className="flex min-w-0 items-center gap-1.5"><Icon name={icon} size={16} className="shrink-0 text-white/45" /><span className="truncate">{text}</span></span>;
 }
 
 function HeroTeam({ team, align }: { team: NonNullable<TeamWithPlayers>; align: "left" | "right" }) {
   return (
     <Link href={`/teams/${team.slug}`} className={`group flex min-w-0 items-center gap-2 sm:gap-3 ${align === "right" ? "flex-col sm:flex-row-reverse sm:justify-start sm:text-right" : "flex-col sm:flex-row sm:justify-start sm:text-left"}`}>
       <TeamLogo team={team} />
-      <h1 className="min-w-0 truncate text-sm font-normal leading-tight tracking-tight group-hover:underline sm:text-lg">{team.name}</h1>
+      <h1 className="min-w-0 text-xs font-normal leading-tight tracking-tight group-hover:underline sm:truncate sm:text-lg">{team.name}</h1>
     </Link>
   );
 }
@@ -251,7 +251,8 @@ function MatchLineups({ matchId, homeTeam, awayTeam, ratings, contributions, lin
   return <div className="space-y-6">
     <div className="overflow-hidden rounded-t-2xl border border-[#171717] bg-[#2c2c2c]">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-[#3b3b3b] bg-[#343434] px-5 py-4 text-sm"><div className="flex items-center gap-3">{homeAvg !== null && <span className={`grid h-7 min-w-[3rem] place-items-center rounded-2xl px-3 text-sm font-black ${ratingColor(homeAvg)}`}>{homeAvg.toFixed(1)}</span>}<TeamMini team={homeTeam} /></div><span /><div className="flex flex-row-reverse items-center gap-3">{awayAvg !== null && <span className={`grid h-7 min-w-[3rem] place-items-center rounded-2xl px-3 text-sm font-black ${ratingColor(awayAvg)}`}>{awayAvg.toFixed(1)}</span>}<TeamMini team={awayTeam} away /></div></div>
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#2c2c2c]">
+      {/* Wide combined pitch — tablet & up */}
+      <div className="relative hidden aspect-[16/10] w-full overflow-hidden bg-[#2c2c2c] sm:block">
         <div className="absolute inset-y-0 left-1/2 border-l-[3px] border-[#3a3a3a]" />
         <div className="absolute left-1/2 top-1/2 size-36 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[#3a3a3a]" />
         <div className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#3a3a3a]" />
@@ -262,12 +263,35 @@ function MatchLineups({ matchId, homeTeam, awayTeam, ratings, contributions, lin
         {home.starters.map((player, index) => <PitchPlayer key={player.id} player={player} contribution={contributions.get(player.id)} rating={ratings.get(player.id)} x={homePositions[index][0]} y={homePositions[index][1]} />)}
         {away.starters.map((player, index) => <PitchPlayer key={player.id} player={player} contribution={contributions.get(player.id)} rating={ratings.get(player.id)} x={awayPositions[index][0]} y={awayPositions[index][1]} />)}
       </div>
+      {/* Two vertical half-pitches — mobile */}
+      <div className="sm:hidden">
+        <HalfPitch team={homeTeam} players={home.starters} ratings={ratings} contributions={contributions} />
+        <HalfPitch team={awayTeam} players={away.starters} ratings={ratings} contributions={contributions} flip />
+      </div>
     </div>
     <div className="grid gap-5 md:grid-cols-2">
       <Bench team={homeTeam} players={home.bench} ratings={ratings} contributions={contributions} />
       <Bench team={awayTeam} players={away.bench} ratings={ratings} contributions={contributions} />
     </div>
   </div>;
+}
+
+function HalfPitch({ team, players, ratings, contributions, flip }: { team: NonNullable<TeamWithPlayers>; players: Player[]; ratings: Map<string, number>; contributions: Map<string, Contribution>; flip?: boolean }) {
+  // GK near own goal, outfield pushed up the pitch. Away team (flip) attacks downward.
+  // GK near own goal line, outfield pushed up. flip => own goal at top (attacks down).
+  const spots = flip ? [[50, 14], [24, 42], [76, 42], [36, 74], [64, 74]] : [[50, 86], [24, 58], [76, 58], [36, 26], [64, 26]];
+  return (
+    <div className="relative aspect-[5/4] w-full overflow-hidden border-t-2 border-[#171717] bg-[#2c2c2c]">
+      <span className={`absolute left-3 z-20 flex max-w-[70%] items-center gap-2 text-xs font-medium text-white/70 ${flip ? "top-3" : "bottom-3"}`}><TeamMini team={team} /></span>
+      {/* halfway line at open (attacking) end */}
+      <div className={`absolute inset-x-0 border-t-[3px] border-[#3a3a3a] ${flip ? "top-1/2" : "bottom-1/2"}`} />
+      <div className={`absolute left-1/2 size-24 -translate-x-1/2 rounded-full border-[3px] border-[#3a3a3a] ${flip ? "top-1/2 -translate-y-1/2" : "bottom-1/2 translate-y-1/2"}`} />
+      <div className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#3a3a3a]" />
+      {/* penalty box at own goal end */}
+      <div className={`absolute left-1/2 h-[16%] w-[55%] -translate-x-1/2 border-x-[3px] border-[#3a3a3a] ${flip ? "top-0 border-b-[3px]" : "bottom-0 border-t-[3px]"}`} />
+      {players.map((player, index) => <PitchPlayer key={player.id} player={player} contribution={contributions.get(player.id)} rating={ratings.get(player.id)} x={spots[index]?.[0] ?? 50} y={spots[index]?.[1] ?? 50} />)}
+    </div>
+  );
 }
 
 function selectLineup(players: Player[], seed: string, saved: Array<{ playerId: string; role: LineupRole; position: number | null }>) {
@@ -301,7 +325,7 @@ function TeamMini({ team, away }: { team: NonNullable<TeamWithPlayers>; away?: b
 }
 
 function Bench({ team, players, ratings, contributions }: { team: NonNullable<TeamWithPlayers>; players: Player[]; ratings: Map<string, number>; contributions: Map<string, Contribution> }) {
-  return <section className="rounded-xl bg-[#292929] p-4"><div className="mb-3 flex items-center justify-between"><h3 className="font-black text-white">{team.name} bench</h3><Badge className="bg-white/10 text-white">{players.length}</Badge></div><div className="space-y-1">{players.map((player) => { const rating=ratings.get(player.id); return <div key={player.id} className="grid grid-cols-[2rem_2rem_1fr_auto_auto_auto] items-center gap-2 rounded-lg px-2 py-2 text-white hover:bg-white/5"><span className="text-center font-mono text-xs text-white/40">{player.shirtNumber ?? "—"}</span><span className="size-8 rounded-full bg-[#444] bg-cover bg-center" style={player.imageUrl ? { backgroundImage: `url(${player.imageUrl})` } : undefined} /><span className="truncate text-sm font-semibold">{player.displayName || `${player.firstName} ${player.lastName}`}</span><Contributions value={contributions.get(player.id)} /><Badge className="bg-white/10 text-[10px] text-white">{positionLabel(player.position)}</Badge>{rating !== undefined ? <span className={`rounded px-1.5 py-0.5 text-[10px] font-black ${ratingColor(rating)}`}>{rating.toFixed(1)}</span> : <span />}</div>})}{!players.length && <p className="py-3 text-center text-sm text-white/40">No substitutes.</p>}</div></section>;
+  return <section className="rounded-xl bg-[#292929] p-4"><div className="mb-3 flex items-center justify-between"><h3 className="font-black text-white">{team.name} bench</h3><Badge className="bg-white/10 text-white">{players.length}</Badge></div><div className="space-y-1">{players.map((player) => { const rating=ratings.get(player.id); return <div key={player.id} className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-2 rounded-lg px-2 py-2 text-white hover:bg-white/5"><span className="size-8 rounded-full bg-[#444] bg-cover bg-center" style={player.imageUrl ? { backgroundImage: `url(${player.imageUrl})` } : undefined} /><span className="truncate text-sm font-semibold">{player.displayName || `${player.firstName} ${player.lastName}`}</span><Contributions value={contributions.get(player.id)} />{rating !== undefined ? <span className={`rounded px-1.5 py-0.5 text-[10px] font-black ${ratingColor(rating)}`}>{rating.toFixed(1)}</span> : <span />}</div>})}{!players.length && <p className="py-3 text-center text-sm text-white/40">No substitutes.</p>}</div></section>;
 }
 
 function Contributions({ value }: { value?: Contribution }) {
@@ -335,9 +359,6 @@ function Info({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-4"><span className="text-white/50">{label}</span><b className="text-right">{value}</b></div>;
 }
 
-function positionLabel(position: PlayerPosition | null) {
-  return position ? ({ GOALKEEPER: "GK", DEFENDER: "DEF", MIDFIELDER: "MID", FORWARD: "ATT", CAPTAIN: "C" } satisfies Record<PlayerPosition, string>)[position] : "—";
-}
 
 function knockoutRound(round: number) {
   return round === 2 ? "Final" : round === 4 ? "Semifinal" : `Round of ${round}`;
