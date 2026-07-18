@@ -147,6 +147,7 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
                             <span className="truncate text-sm font-medium sm:text-base">{match.awayTeam.name}</span>
                           </span>
                         </div>
+                        <span className="w-11 shrink-0" />
                       </Link>
                     );
                   })}
