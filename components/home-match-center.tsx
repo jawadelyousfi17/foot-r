@@ -136,7 +136,7 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
                         </span>
                         <div className="grid flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
                           <span className="flex min-w-0 items-center justify-end gap-2 text-right">
-                            <span className="truncate text-sm font-medium sm:text-base">{match.homeTeam.name}</span>
+                            <span className="text-sm font-medium leading-tight sm:truncate sm:text-base">{match.homeTeam.name}</span>
                             <TeamMark team={match.homeTeam} />
                           </span>
                           <span className="min-w-[3rem] text-center text-sm font-bold tabular-nums sm:text-base">
@@ -144,7 +144,7 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
                           </span>
                           <span className="flex min-w-0 items-center gap-2">
                             <TeamMark team={match.awayTeam} />
-                            <span className="truncate text-sm font-medium sm:text-base">{match.awayTeam.name}</span>
+                            <span className="text-sm font-medium leading-tight sm:truncate sm:text-base">{match.awayTeam.name}</span>
                           </span>
                         </div>
                         <span className="w-11 shrink-0" />

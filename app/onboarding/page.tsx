@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Icon } from "@/components/icon";
+import { OnboardingRedirect } from "@/components/onboarding-redirect";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,8 @@ export default async function OnboardingPage() {
               Explore matches
             </Link>
           </div>
+
+          <OnboardingRedirect />
         </div>
       </section>
     </main>
