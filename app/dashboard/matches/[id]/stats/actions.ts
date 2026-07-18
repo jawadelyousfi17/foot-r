@@ -10,7 +10,7 @@ import { MatchStatus } from "@/generated/prisma/client";
 async function requireOwnedMatch(matchId: string) {
   const session = await auth();
   if (!session?.user?.id || !session.user.isAdmin) throw new Error("Administrator access is required");
-  const match = await prisma.match.findFirst({ where: { id: matchId, competition: { ownerId: session.user.id } }, select: { id: true } });
+  const match = await prisma.match.findFirst({ where: { id: matchId }, select: { id: true } });
   if (!match) throw new Error("Match not found or access denied");
 }
 
@@ -43,7 +43,7 @@ export async function saveTeamStats(matchId: string, teamId: string, rows: Array
   const session = await auth();
   if (!session?.user?.id || !session.user.isAdmin) throw new Error("Administrator access is required");
   const match = await prisma.match.findFirst({
-    where: { id: matchId, competition: { ownerId: session.user.id } },
+    where: { id: matchId },
     select: { homeTeamId: true, awayTeamId: true, status: true, result: { select: { id: true } } },
   });
   if (!match) throw new Error("Match not found or access denied");
@@ -99,7 +99,7 @@ export async function updateMatchPhase(matchId: string, status: string) {
   const allowed: MatchStatus[] = [MatchStatus.SCHEDULED, MatchStatus.FIRST_HALF, MatchStatus.HALF_TIME, MatchStatus.SECOND_HALF, MatchStatus.EXTRA_TIME, MatchStatus.PENALTIES, MatchStatus.COMPLETED];
   const validStatus = allowed.find((value) => value === status);
   if (!validStatus) throw new Error("Invalid match phase");
-  const match = await prisma.match.findFirst({ where: { id: matchId, competition: { ownerId: session.user.id } }, select: { id: true } });
+  const match = await prisma.match.findFirst({ where: { id: matchId }, select: { id: true } });
   if (!match) throw new Error("Match not found or access denied");
   const timedPhases: MatchStatus[] = [MatchStatus.FIRST_HALF, MatchStatus.SECOND_HALF, MatchStatus.EXTRA_TIME, MatchStatus.PENALTIES];
   await prisma.match.update({ where: { id: matchId }, data: { status: validStatus, phaseStartedAt: timedPhases.includes(validStatus) ? new Date() : null } });

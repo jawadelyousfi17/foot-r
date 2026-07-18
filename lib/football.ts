@@ -73,16 +73,16 @@ async function requireAdmin() {
   return session.user.id;
 }
 
-async function requireCompetitionOwner(competitionId: string, userId: string) {
+// Competitions are managed collectively: any administrator can manage any
+// competition, regardless of which admin created it. Callers must already
+// have passed requireAdmin(); this only checks the competition exists.
+async function requireCompetition(competitionId: string) {
   const competition = await prisma.competition.findUnique({
     where: { id: competitionId },
-    select: { id: true, ownerId: true },
+    select: { id: true },
   });
 
   if (!competition) throw new DomainError("Competition not found", "NOT_FOUND");
-  if (competition.ownerId !== userId) {
-    throw new DomainError("You do not manage this competition", "FORBIDDEN");
-  }
 }
 
 export async function listPublicTeams() {
@@ -299,8 +299,8 @@ export async function setCompetitionStatus(
   competitionId: string,
   status: CompetitionStatus,
 ) {
-  const userId = await requireAdmin();
-  await requireCompetitionOwner(competitionId, userId);
+  await requireAdmin();
+  await requireCompetition(competitionId);
   return prisma.competition.update({ where: { id: competitionId }, data: { status } });
 }
 
@@ -309,8 +309,8 @@ export async function createGroup(input: {
   name: string;
   position?: number;
 }) {
-  const userId = await requireAdmin();
-  await requireCompetitionOwner(input.competitionId, userId);
+  await requireAdmin();
+  await requireCompetition(input.competitionId);
   if (input.position !== undefined) nonNegativeInteger(input.position, "Position");
 
   return prisma.group.create({
@@ -327,8 +327,8 @@ export async function addTeamToCompetition(input: {
   teamId: string;
   seed?: number;
 }) {
-  const userId = await requireAdmin();
-  await requireCompetitionOwner(input.competitionId, userId);
+  await requireAdmin();
+  await requireCompetition(input.competitionId);
   if (input.seed !== undefined) nonNegativeInteger(input.seed, "Seed");
   const team = await prisma.team.findUnique({ where: { id: input.teamId }, select: { id: true } });
   if (!team) throw new DomainError("Team not found", "NOT_FOUND");
@@ -341,8 +341,8 @@ export async function addTeamsToCompetition(input: {
   competitionId: string;
   teamIds: string[];
 }) {
-  const userId = await requireAdmin();
-  await requireCompetitionOwner(input.competitionId, userId);
+  await requireAdmin();
+  await requireCompetition(input.competitionId);
   const teamIds = [...new Set(input.teamIds.filter(Boolean))];
   if (!teamIds.length) throw new DomainError("Select at least one team", "INVALID_INPUT");
 
@@ -359,8 +359,8 @@ export async function createCompetitionGroups(input: {
   competitionId: string;
   count: number;
 }) {
-  const userId = await requireAdmin();
-  await requireCompetitionOwner(input.competitionId, userId);
+  await requireAdmin();
+  await requireCompetition(input.competitionId);
   if (!Number.isInteger(input.count) || input.count < 1 || input.count > 26) {
     throw new DomainError("Group count must be between 1 and 26", "INVALID_INPUT");
   }
@@ -380,13 +380,13 @@ export async function addTeamToGroup(input: {
   teamId: string;
   seed?: number;
 }) {
-  const userId = await requireAdmin();
+  await requireAdmin();
   const group = await prisma.group.findUnique({
     where: { id: input.groupId },
     select: { competitionId: true },
   });
   if (!group) throw new DomainError("Group not found", "NOT_FOUND");
-  await requireCompetitionOwner(group.competitionId, userId);
+  await requireCompetition(group.competitionId);
   if (input.seed !== undefined) nonNegativeInteger(input.seed, "Seed");
 
   const team = await prisma.team.findUnique({
@@ -408,13 +408,13 @@ export async function addTeamsToGroup(input: {
   groupId: string;
   teamIds: string[];
 }) {
-  const userId = await requireAdmin();
+  await requireAdmin();
   const group = await prisma.group.findUnique({
     where: { id: input.groupId },
     select: { competitionId: true },
   });
   if (!group) throw new DomainError("Group not found", "NOT_FOUND");
-  await requireCompetitionOwner(group.competitionId, userId);
+  await requireCompetition(group.competitionId);
 
   const teamIds = [...new Set(input.teamIds.filter(Boolean))];
   if (!teamIds.length) throw new DomainError("Select at least one team", "INVALID_INPUT");
@@ -440,13 +440,13 @@ export async function addTeamsToGroup(input: {
 }
 
 export async function updateGroup(input: { groupId: string; name: string }) {
-  const userId = await requireAdmin();
+  await requireAdmin();
   const group = await prisma.group.findUnique({
     where: { id: input.groupId },
     select: { competitionId: true },
   });
   if (!group) throw new DomainError("Group not found", "NOT_FOUND");
-  await requireCompetitionOwner(group.competitionId, userId);
+  await requireCompetition(group.competitionId);
   return prisma.group.update({
     where: { id: input.groupId },
     data: { name: requiredText(input.name, "Group name") },
@@ -454,13 +454,13 @@ export async function updateGroup(input: { groupId: string; name: string }) {
 }
 
 export async function deleteGroup(groupId: string) {
-  const userId = await requireAdmin();
+  await requireAdmin();
   const group = await prisma.group.findUnique({
     where: { id: groupId },
     select: { competitionId: true },
   });
   if (!group) throw new DomainError("Group not found", "NOT_FOUND");
-  await requireCompetitionOwner(group.competitionId, userId);
+  await requireCompetition(group.competitionId);
   return prisma.$transaction([
     prisma.match.deleteMany({ where: { groupId } }),
     prisma.group.delete({ where: { id: groupId } }),
@@ -486,13 +486,13 @@ function roundRobinRounds(teamIds: string[]) {
 }
 
 export async function generateGroupFixtures(input: { groupId: string; legs: 1 | 2 }) {
-  const userId = await requireAdmin();
+  await requireAdmin();
   const group = await prisma.group.findUnique({
     where: { id: input.groupId },
     include: { teams: { orderBy: [{ seed: "asc" }, { joinedAt: "asc" }], select: { teamId: true } } },
   });
   if (!group) throw new DomainError("Group not found", "NOT_FOUND");
-  await requireCompetitionOwner(group.competitionId, userId);
+  await requireCompetition(group.competitionId);
   if (input.legs !== 1 && input.legs !== 2) throw new DomainError("Choose one or two legs", "INVALID_INPUT");
   if (group.teams.length < 2) throw new DomainError("The group needs at least two teams", "CONFLICT");
 
@@ -518,8 +518,8 @@ export async function generateGroupFixtures(input: { groupId: string; legs: 1 | 
 }
 
 export async function generateAllGroupFixtures(input: { competitionId: string; legs: 1 | 2 }) {
-  const userId = await requireAdmin();
-  await requireCompetitionOwner(input.competitionId, userId);
+  await requireAdmin();
+  await requireCompetition(input.competitionId);
   const groups = await prisma.group.findMany({
     where: { competitionId: input.competitionId, teams: { some: {} } },
     select: { id: true, _count: { select: { teams: true } } },
@@ -541,13 +541,13 @@ export async function generateAllGroupFixtures(input: { competitionId: string; l
 }
 
 export async function scheduleMatch(input: { matchId: string; scheduledAt: Date }) {
-  const userId = await requireAdmin();
+  await requireAdmin();
   const match = await prisma.match.findUnique({
     where: { id: input.matchId },
     select: { competitionId: true },
   });
   if (!match) throw new DomainError("Match not found", "NOT_FOUND");
-  await requireCompetitionOwner(match.competitionId, userId);
+  await requireCompetition(match.competitionId);
   if (Number.isNaN(input.scheduledAt.getTime())) throw new DomainError("Choose a valid date and time", "INVALID_INPUT");
   return prisma.match.update({ where: { id: input.matchId }, data: { scheduledAt: input.scheduledAt } });
 }
@@ -559,8 +559,8 @@ export async function createKnockoutFixture(input: {
   awayGroupId: string;
   awayPosition: number;
 }) {
-  const userId = await requireAdmin();
-  await requireCompetitionOwner(input.competitionId, userId);
+  await requireAdmin();
+  await requireCompetition(input.competitionId);
   if (input.homeGroupId === input.awayGroupId && input.homePosition === input.awayPosition) {
     throw new DomainError("Choose two different group positions", "INVALID_INPUT");
   }
@@ -595,8 +595,8 @@ export async function generateKnockoutStage(input: {
   bestNextPlaced: number;
   groupPairs: string[][];
 }) {
-  const userId = await requireAdmin();
-  await requireCompetitionOwner(input.competitionId, userId);
+  await requireAdmin();
+  await requireCompetition(input.competitionId);
   const groups = await prisma.group.findMany({
     where: { competitionId: input.competitionId },
     orderBy: [{ position: "asc" }, { name: "asc" }],
@@ -684,8 +684,8 @@ export async function createMatch(input: {
   scheduledAt?: Date;
   venue?: string;
 }) {
-  const userId = await requireAdmin();
-  await requireCompetitionOwner(input.competitionId, userId);
+  await requireAdmin();
+  await requireCompetition(input.competitionId);
 
   if (input.homeTeamId === input.awayTeamId) {
     throw new DomainError("A team cannot play itself", "INVALID_INPUT");
@@ -732,13 +732,13 @@ export async function recordMatchResult(input: {
   awayScore: number;
   notes?: string;
 }) {
-  const userId = await requireAdmin();
+  await requireAdmin();
   const match = await prisma.match.findUnique({
     where: { id: input.matchId },
     select: { competitionId: true, status: true },
   });
   if (!match) throw new DomainError("Match not found", "NOT_FOUND");
-  await requireCompetitionOwner(match.competitionId, userId);
+  await requireCompetition(match.competitionId);
   if (match.status === MatchStatus.CANCELLED) {
     throw new DomainError("A cancelled match cannot have a result", "CONFLICT");
   }

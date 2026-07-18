@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 export async function saveMatchLineup(matchId: string, teamId: string, starterIds: string[]) {
   const session = await auth();
   if (!session?.user?.id || !session.user.isAdmin) throw new Error("Administrator access is required");
-  const match = await prisma.match.findFirst({ where: { id: matchId, competition: { ownerId: session.user.id } }, select: { homeTeamId: true, awayTeamId: true } });
+  const match = await prisma.match.findFirst({ where: { id: matchId }, select: { homeTeamId: true, awayTeamId: true } });
   if (!match) throw new Error("Match not found or access denied");
   if (teamId !== match.homeTeamId && teamId !== match.awayTeamId) throw new Error("This team is not in the match");
   const starters = [...new Set(starterIds)];

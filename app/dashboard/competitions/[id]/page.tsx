@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { getGroupStandings } from "@/lib/football";
 import { prisma } from "@/lib/prisma";
 import { CompetitionBuilder } from "./competition-builder";
+import { MatchFilter } from "./match-filter";
 import { recordResultAction, scheduleMatchAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function ManageCompetitionPage({ params }: { params: Promis
 
   const [competition, allTeams] = await Promise.all([
     prisma.competition.findFirst({
-      where: { id, ownerId: session.user.id },
+      where: { id },
       include: {
         teams: { include: { team: true }, orderBy: { joinedAt: "asc" } },
         groups: {
@@ -91,44 +92,73 @@ type ManagedMatch = Awaited<ReturnType<typeof prisma.match.findMany>>[number] & 
   result: { homeScore: number; awayScore: number } | null;
 };
 
+function filterMeta(matches: ManagedMatch[]) {
+  return {
+    groups: [...new Set(matches.map((match) => match.group?.name).filter((name): name is string => Boolean(name)))],
+    hasKnockout: matches.some((match) => match.group === null),
+  };
+}
+
 function FixtureSchedule({ competitionId, matches }: { competitionId: string; matches: ManagedMatch[] }) {
+  const { groups, hasKnockout } = filterMeta(matches);
   return (
     <section>
       <SectionHeading eyebrow="Schedule" title="Fixture dates" count={matches.length} />
-      <div className="space-y-3">
-        {matches.map((match) => (
-          <MatchCard key={match.id} match={match}>
-            <form action={scheduleMatchAction.bind(null, competitionId, match.id)} className="flex items-end gap-2">
-              <label className="text-xs font-bold">Edit date & time
-                <input name="scheduledAt" type="datetime-local" required defaultValue={match.scheduledAt?.toISOString().slice(0, 16)} className="mt-1 block h-8 rounded-lg border border-input px-2 text-sm" />
-              </label>
-              <Button type="submit" variant="outline">{match.scheduledAt ? "Update time" : "Set time"}</Button>
-            </form>
-          </MatchCard>
-        ))}
-        {!matches.length && <EmptyMatches />}
-      </div>
+      {!matches.length ? <EmptyMatches /> : (
+        <MatchFilter
+          groups={groups}
+          hasKnockout={hasKnockout}
+          unsetLabel="Only without date"
+          items={matches.map((match) => ({
+            key: match.id,
+            group: match.group?.name ?? null,
+            unset: !match.scheduledAt,
+            search: `${match.homeTeam.name} ${match.awayTeam.name}`.toLowerCase(),
+            node: (
+              <MatchCard match={match}>
+                <form action={scheduleMatchAction.bind(null, competitionId, match.id)} className="flex items-end gap-2">
+                  <label className="text-xs font-bold">Edit date & time
+                    <input name="scheduledAt" type="datetime-local" required defaultValue={match.scheduledAt?.toISOString().slice(0, 16)} className="mt-1 block h-8 rounded-lg border border-input px-2 text-sm" />
+                  </label>
+                  <Button type="submit" variant="outline">{match.scheduledAt ? "Update time" : "Set time"}</Button>
+                </form>
+              </MatchCard>
+            ),
+          }))}
+        />
+      )}
     </section>
   );
 }
 
 function MatchResults({ competitionId, matches }: { competitionId: string; matches: ManagedMatch[] }) {
+  const { groups, hasKnockout } = filterMeta(matches);
   return (
     <section>
       <SectionHeading eyebrow="Match control" title="Enter results" count={matches.length} />
-      <div className="space-y-3">
-        {matches.map((match) => (
-          <MatchCard key={match.id} match={match}>
-            <form action={recordResultAction.bind(null, competitionId, match.id)} className="flex items-end gap-2">
-              <ScoreInput name="homeScore" label="Home" value={match.result?.homeScore} />
-              <span className="pb-2 font-black">:</span>
-              <ScoreInput name="awayScore" label="Away" value={match.result?.awayScore} />
-              <Button type="submit">{match.result ? "Update" : "Save result"}</Button>
-            </form>
-          </MatchCard>
-        ))}
-        {!matches.length && <EmptyMatches />}
-      </div>
+      {!matches.length ? <EmptyMatches /> : (
+        <MatchFilter
+          groups={groups}
+          hasKnockout={hasKnockout}
+          unsetLabel="Only without result"
+          items={matches.map((match) => ({
+            key: match.id,
+            group: match.group?.name ?? null,
+            unset: !match.result,
+            search: `${match.homeTeam.name} ${match.awayTeam.name}`.toLowerCase(),
+            node: (
+              <MatchCard match={match}>
+                <form action={recordResultAction.bind(null, competitionId, match.id)} className="flex items-end gap-2">
+                  <ScoreInput name="homeScore" label="Home" value={match.result?.homeScore} />
+                  <span className="pb-2 font-black">:</span>
+                  <ScoreInput name="awayScore" label="Away" value={match.result?.awayScore} />
+                  <Button type="submit">{match.result ? "Update" : "Save result"}</Button>
+                </form>
+              </MatchCard>
+            ),
+          }))}
+        />
+      )}
     </section>
   );
 }

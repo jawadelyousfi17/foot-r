@@ -10,8 +10,7 @@ export default async function StatsMatchPickerPage() {
   const session = await auth();
   if (!session?.user?.isAdmin) redirect("/dashboard");
   const matches = await prisma.match.findMany({
-    where: { competition: { ownerId: session.user.id } },
-    orderBy: [{ scheduledAt: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ scheduledAt: "desc" }, { createdAt: "desc" }],
     include: { competition: true, homeTeam: true, awayTeam: true, _count: { select: { playerStats: true } } },
   });
 

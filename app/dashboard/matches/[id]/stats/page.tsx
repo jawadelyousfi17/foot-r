@@ -15,7 +15,7 @@ export default async function MatchStatsPage({ params }: { params: Promise<{ id:
   const session = await auth();
   if (!session?.user?.isAdmin) redirect("/dashboard");
   const match = await prisma.match.findFirst({
-    where: { id, competition: { ownerId: session.user.id } },
+    where: { id },
     include: {
       competition: true,
       homeTeam: { include: { players: { include: { matchStats: { where: { matchId: id } } }, orderBy: { shirtNumber: "asc" } } } },

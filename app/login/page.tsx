@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Icon } from "@/components/icon";
+import { LoginButton } from "@/components/login-button";
 import { signInWithFortyTwo } from "./actions";
 
 export const metadata: Metadata = {
@@ -16,14 +16,11 @@ export default function LoginPage() {
           <h1 className="text-2xl font-black tracking-tight">Welcome to Foot-R</h1>
         </div>
         <form action={signInWithFortyTwo}>
-          <button
-            type="submit"
-            className="flex h-12 w-full items-center justify-center gap-3 rounded-full bg-[#00c281] px-4 font-bold text-[#04120c] transition hover:bg-[#05e08c]"
-          >
-            <span aria-hidden="true" className="text-xl font-black tracking-tighter">42</span>
-            Continue with 42
-          </button>
+          <LoginButton />
         </form>
+        <p className="mt-8 text-center text-xs text-white/35">
+          Made by <span className="font-bold text-white/60">Wedesignclub</span>
+        </p>
       </section>
     </main>
   );
