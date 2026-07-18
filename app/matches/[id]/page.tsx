@@ -72,11 +72,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       label: "Lineups",
       content: <MatchLineups matchId={match.id} homeTeam={match.homeTeam} awayTeam={match.awayTeam} ratings={ratings} contributions={contributions} lineupEntries={match.lineupEntries} />,
     },
-    { label: "Statistics", content: statistics },
+    { label: "Statistics", content: <div className="rounded-2xl bg-[#1b1b1b] p-4 sm:p-0">{statistics}</div> },
     {
       label: "Head-to-Head",
       content: (
-        <div>
+        <div className="rounded-2xl bg-[#1b1b1b] p-4 sm:p-0">
           <h3 className="mb-4 font-bold">Match information</h3>
           <div className="space-y-3 text-sm">
             <Info label="Competition" value={match.competition.name} />
@@ -159,7 +159,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           </section>
 
           {/* Tab content in its own card, separated by a gap */}
-          <div className="mt-5 rounded-[28px] bg-[#1b1b1b] p-4 sm:p-6">
+          <div className="mt-5 rounded-none bg-transparent p-0 sm:rounded-[28px] sm:bg-[#1b1b1b] sm:p-6">
             <MatchTabsContent />
           </div>
          </MatchTabsProvider>
@@ -283,12 +283,6 @@ function HalfPitch({ team, players, ratings, contributions, flip }: { team: NonN
   return (
     <div className="relative aspect-[5/4] w-full overflow-hidden border-t-2 border-[#171717] bg-[#2c2c2c]">
       <span className={`absolute left-3 z-20 flex max-w-[70%] items-center gap-2 text-xs font-medium text-white/70 ${flip ? "top-3" : "bottom-3"}`}><TeamMini team={team} /></span>
-      {/* halfway line at open (attacking) end */}
-      <div className={`absolute inset-x-0 border-t-[3px] border-[#3a3a3a] ${flip ? "top-1/2" : "bottom-1/2"}`} />
-      <div className={`absolute left-1/2 size-24 -translate-x-1/2 rounded-full border-[3px] border-[#3a3a3a] ${flip ? "top-1/2 -translate-y-1/2" : "bottom-1/2 translate-y-1/2"}`} />
-      <div className="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#3a3a3a]" />
-      {/* penalty box at own goal end */}
-      <div className={`absolute left-1/2 h-[16%] w-[55%] -translate-x-1/2 border-x-[3px] border-[#3a3a3a] ${flip ? "top-0 border-b-[3px]" : "bottom-0 border-t-[3px]"}`} />
       {players.map((player, index) => <PitchPlayer key={player.id} player={player} contribution={contributions.get(player.id)} rating={ratings.get(player.id)} x={spots[index]?.[0] ?? 50} y={spots[index]?.[1] ?? 50} />)}
     </div>
   );
