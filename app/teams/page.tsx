@@ -15,7 +15,7 @@ export default async function TeamsPage() {
             {teams.map((team) => (
               <Link key={team.id} href={`/teams/${team.slug}`} className="group rounded-3xl border border-white/8 bg-[#1b1b1b] p-6 transition hover:-translate-y-1 hover:border-white/15 hover:bg-[#212121]">
                 <div style={team.logoUrl ? { backgroundImage: `url(${team.logoUrl})` } : undefined} className="grid size-14 place-items-center rounded-2xl bg-[#00c281] bg-cover bg-center text-xl font-black text-[#04120c]">
-                  {team.logoUrl ? null : team.shortName || team.name.slice(0, 2).toUpperCase()}
+                  {team.logoUrl ? null : <Icon name="shield" size={26} />}
                 </div>
                 <h2 className="mt-8 text-2xl font-black tracking-tight group-hover:text-[#00c281]">{team.name}</h2>
                 <p className="mt-2 flex items-center gap-1.5 text-sm text-white/45">

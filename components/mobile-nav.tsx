@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Icon } from "@/components/icon";
+import { Icon, type IconName } from "@/components/icon";
 import { SiteSearch } from "@/components/site-search";
 
 const LINKS = [
@@ -11,7 +11,12 @@ const LINKS = [
   { href: "/competitions", label: "Competitions" },
 ];
 
-export function MobileNav({ authed, signOutAction }: { authed: boolean; signOutAction: () => Promise<void> }) {
+export function MobileNav({ authed, isAdmin, socials, signOutAction }: {
+  authed: boolean;
+  isAdmin: boolean;
+  socials: ReadonlyArray<{ label: string; icon: IconName; href: string }>;
+  signOutAction: () => Promise<void>;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className="lg:hidden">
@@ -41,9 +46,17 @@ export function MobileNav({ authed, signOutAction }: { authed: boolean; signOutA
                 </Link>
               ))}
               <div className="my-2 h-px bg-white/8" />
+              <div className="flex items-center gap-1 px-2 pb-1">
+                {socials.map((social) => (
+                  <a key={social.label} href={social.href} target="_blank" rel="noopener noreferrer" aria-label={social.label} title={social.label} className="grid size-11 place-items-center rounded-full text-white/60 transition hover:bg-white/5 hover:text-white">
+                    <Icon name={social.icon} size={20} strokeWidth={2} />
+                  </a>
+                ))}
+              </div>
+              <div className="my-2 h-px bg-white/8" />
               {authed ? (
                 <>
-                  <Link href="/dashboard" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 text-base font-medium text-white/80 transition hover:bg-white/5 hover:text-white">Dashboard</Link>
+                  {isAdmin && <Link href="/dashboard" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 text-base font-medium text-white/80 transition hover:bg-white/5 hover:text-white">Dashboard</Link>}
                   <form action={signOutAction}>
                     <button className="w-full rounded-xl px-4 py-3 text-left text-base font-medium text-[#dd3636] transition hover:bg-white/5">Sign out</button>
                   </form>

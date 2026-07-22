@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calculatePlayerRating, matchOutcome, ratingColor } from "@/lib/player-rating";
 import { emptyStats, type StatValues } from "@/lib/match-stats";
-import { Check, Minus, Plus, Save } from "@/components/icon";
+import { Check, Icon, Minus, Plus, Save } from "@/components/icon";
 import { saveMatchGoals } from "./actions";
 
 type Player = { id: string; name: string; login: string | null; imageUrl: string | null; number: number | null; goals: number; assists: number; yellowCards: number; redCards: number; stats: StatValues };
@@ -106,7 +106,9 @@ export function GoalsEditor({ matchId, homeTeam, awayTeam, expectedScore }: {
               const booked = row.yellowCards > 0 || row.redCards > 0;
               return (
                 <div key={player.id} className={`flex flex-wrap items-center gap-3 rounded-xl border p-3 ${involved ? "border-black bg-[#d7ff3f]/25" : booked ? "border-red-300 bg-red-50" : "bg-muted/30"}`}>
-                  <span className="size-9 shrink-0 rounded-full bg-muted bg-cover bg-center" style={player.imageUrl ? { backgroundImage: `url(${player.imageUrl})` } : undefined} />
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted bg-cover bg-center text-muted-foreground" style={player.imageUrl ? { backgroundImage: `url(${player.imageUrl})` } : undefined}>
+                    {player.imageUrl ? null : <Icon name="player" size={16} />}
+                  </span>
                   <span className="min-w-0 flex-1">
                     <b className="block text-sm break-words">{player.name}</b>
                     <small className="block text-muted-foreground break-words">

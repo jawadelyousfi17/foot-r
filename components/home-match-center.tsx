@@ -22,6 +22,7 @@ type Competition = {
   name: string;
   slug: string;
   status: string;
+  logoUrl: string | null;
   matches: Array<{
     id: string;
     scheduledAt: string | null;
@@ -64,8 +65,8 @@ function TeamMark({ team }: { team: { name: string; logoUrl: string | null } }) 
     // eslint-disable-next-line @next/next/no-img-element
     <img src={team.logoUrl} alt="" className="size-7 rounded-full bg-white object-cover ring-1 ring-white/10" />
   ) : (
-    <span className="grid size-7 place-items-center rounded-full bg-white/10 text-[10px] font-black">
-      {team.name.slice(0, 2).toUpperCase()}
+    <span className="grid size-7 place-items-center rounded-full bg-white/10 text-white/45" title={team.name}>
+      <Icon name="shield" size={14} />
     </span>
   );
 }
@@ -109,10 +110,21 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
         <section className="overflow-hidden rounded-[28px] bg-[#1b1b1b]">
           <div
             className="relative px-5 pb-5 pt-7 sm:px-8 sm:pt-8"
-            style={{ backgroundImage: "linear-gradient(90deg,rgba(16,42,28,.82) 0%,rgba(33,46,35,.5) 34%,rgba(23,43,77,.42) 62%,rgba(17,53,143,.38) 100%), linear-gradient(108deg,#24442d 0%,#2f5a3c 24%,#2e4159 52%,#183e98 78%,#182e77 100%)" }}
+            style={{ background: "#B993D6", backgroundImage: "linear-gradient(to right, #8CA6DB, #B993D6)" }}
           >
-            <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{competition?.name ?? "Match center"}</h1>
-            <p className="mt-1 text-sm font-medium text-white/70">Summer football</p>
+            <div className="flex items-center gap-4">
+              {/* Falls back to the app logo in /public when a competition has none of its own. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={competition?.logoUrl || "/logo.png"}
+                alt=""
+                className="size-24 shrink-0 object-contain sm:size-28"
+              />
+              <div className="min-w-0">
+                <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{competition?.name ?? "Match center"}</h1>
+                <p className="mt-1 text-sm font-medium text-white/70">Summer football</p>
+              </div>
+            </div>
           </div>
           <div className="flex gap-7 px-5 sm:px-8">
             {(["matches", "standings", "knockout"] as const).map((tab) => (

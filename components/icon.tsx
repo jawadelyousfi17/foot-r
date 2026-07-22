@@ -37,6 +37,11 @@ import {
   Delete02Icon,
   Login03Icon,
   Logout03Icon,
+  DiscordIcon,
+  InstagramIcon,
+  WhatsappIcon,
+  UserCircleIcon,
+  User03Icon,
 } from "@hugeicons/core-free-icons";
 
 // Central icon registry. Every icon in the app resolves through here so the
@@ -80,6 +85,11 @@ const registry = {
   delete: Delete02Icon,
   login: Login03Icon,
   logout: Logout03Icon,
+  discord: DiscordIcon,
+  instagram: InstagramIcon,
+  whatsapp: WhatsappIcon,
+  profile: UserCircleIcon,
+  player: User03Icon,
 } as const;
 
 export type IconName = keyof typeof registry;

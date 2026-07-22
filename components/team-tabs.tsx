@@ -15,11 +15,7 @@ export function TeamTabs({
       <section className="relative overflow-hidden rounded-2xl border border-white/8">
         <div
           className="absolute inset-0"
-          style={{
-            backgroundColor: "#1a1a1a",
-            backgroundImage:
-              "radial-gradient(120% 150% at 100% 45%, rgba(0,68,255,.55), transparent 46%), radial-gradient(95% 130% at 6% -15%, rgba(151,224,95,.42), transparent 42%), radial-gradient(75% 110% at 20% -35%, rgba(250,61,61,.5), transparent 44%)",
-          }}
+          style={{ backgroundColor: "#B993D6", backgroundImage: "linear-gradient(to right, #8CA6DB, #B993D6)" }}
         />
         <div className="relative px-5 pt-6 sm:px-8">
           {header}

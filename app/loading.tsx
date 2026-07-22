@@ -4,7 +4,7 @@ export default function Loading() {
       <div className="mx-auto max-w-6xl space-y-5">
         {/* hero card skeleton */}
         <div className="overflow-hidden rounded-[28px] bg-[#1b1b1b]">
-          <div className="h-40 bg-gradient-to-r from-[#24442d] via-[#2e4159] to-[#182e77] opacity-40" />
+          <div className="h-40 bg-gradient-to-r from-[#8CA6DB] to-[#B993D6] opacity-40" />
           <div className="flex gap-6 px-6 py-4">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-4 w-20 rounded bg-white/10" />

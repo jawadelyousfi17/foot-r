@@ -36,6 +36,7 @@ export default async function Home() {
         name: competition.name,
         slug: competition.slug,
         status: competition.status,
+        logoUrl: competition.logoUrl,
         matches: competition.matches.map((match) => ({
           id: match.id,
           scheduledAt: match.scheduledAt?.toISOString() ?? null,

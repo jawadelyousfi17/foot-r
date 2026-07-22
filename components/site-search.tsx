@@ -7,7 +7,7 @@ import { searchSite, type SearchResults } from "@/app/search/actions";
 
 const noResults: SearchResults = { teams: [], players: [] };
 
-export function SiteSearch({ onNavigate, autoFocus }: { onNavigate?: () => void; autoFocus?: boolean }) {
+export function SiteSearch({ onNavigate, autoFocus, compact }: { onNavigate?: () => void; autoFocus?: boolean; compact?: boolean }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(noResults);
   const [open, setOpen] = useState(false);
@@ -72,7 +72,7 @@ export function SiteSearch({ onNavigate, autoFocus }: { onNavigate?: () => void;
           onFocus={() => setOpen(true)}
           onKeyDown={(event) => { if (event.key === "Escape") { setOpen(false); event.currentTarget.blur(); } }}
           placeholder="Search players and teams"
-          className="h-11 w-full rounded-full border border-white/5 bg-white/[.06] pl-11 pr-4 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/15 focus:bg-white/10"
+          className={`w-full rounded-full border border-white/5 bg-white/[.06] pl-11 pr-4 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/15 focus:bg-white/10 ${compact ? "h-9" : "h-11"}`}
         />
       </label>
 
@@ -86,8 +86,8 @@ export function SiteSearch({ onNavigate, autoFocus }: { onNavigate?: () => void;
               <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[.15em] text-white/35">Teams</p>
               {results.teams.map((team) => (
                 <Link key={team.id} href={`/teams/${team.slug}`} onClick={close} className="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-white/5">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/10 bg-cover bg-center text-xs font-black text-white" style={team.logoUrl ? { backgroundImage: `url(${team.logoUrl})` } : undefined}>
-                    {team.logoUrl ? null : (team.shortName || team.name.slice(0, 2).toUpperCase())}
+                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/10 bg-cover bg-center text-white/45" style={team.logoUrl ? { backgroundImage: `url(${team.logoUrl})` } : undefined}>
+                    {team.logoUrl ? null : <Icon name="shield" size={16} />}
                   </span>
                   <span className="min-w-0">
                     <b className="block truncate text-sm text-white">{team.name}</b>
@@ -104,7 +104,9 @@ export function SiteSearch({ onNavigate, autoFocus }: { onNavigate?: () => void;
               {results.players.map((player) => {
                 const row = (
                   <>
-                    <span className="size-9 shrink-0 rounded-full bg-white/10 bg-cover bg-center" style={player.imageUrl ? { backgroundImage: `url(${player.imageUrl})` } : undefined} />
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/10 bg-cover bg-center text-white/45" style={player.imageUrl ? { backgroundImage: `url(${player.imageUrl})` } : undefined}>
+                      {player.imageUrl ? null : <Icon name="player" size={16} />}
+                    </span>
                     <span className="min-w-0">
                       <b className="block truncate text-sm text-white">{player.name}</b>
                       <small className="block truncate text-white/40">

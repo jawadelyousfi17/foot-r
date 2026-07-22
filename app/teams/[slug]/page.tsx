@@ -72,8 +72,8 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
   const header = (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="flex items-center gap-4">
-        <div style={team.logoUrl ? { backgroundImage: `url(${team.logoUrl})` } : undefined} className="grid size-16 shrink-0 place-items-center rounded-2xl bg-[#00c281] bg-cover bg-center text-xl font-black text-[#04120c]">
-          {team.logoUrl ? null : (team.shortName || team.name.slice(0, 2).toUpperCase())}
+        <div style={team.logoUrl ? { backgroundImage: `url(${team.logoUrl})` } : undefined} className="grid size-16 shrink-0 place-items-center rounded-2xl bg-[#00c281] bg-cover bg-center text-[#04120c]">
+          {team.logoUrl ? null : <Icon name="shield" size={30} />}
         </div>
         <div>
           <h1 className="text-3xl font-black tracking-tight sm:text-4xl">{team.name}</h1>
@@ -142,7 +142,7 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
                 <div key={player.id} className="flex flex-col items-center text-center">
                   <span className="relative">
                     <span className="grid size-12 place-items-center overflow-hidden rounded-full bg-[#3a3a3a]" style={player.imageUrl ? { backgroundImage: `url(${player.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>
-                      {player.imageUrl ? null : <b className="text-xs">{player.shirtNumber ?? "—"}</b>}
+                      {player.imageUrl ? null : player.shirtNumber !== null ? <b className="text-xs">{player.shirtNumber}</b> : <Icon name="player" size={18} className="text-white/50" />}
                     </span>
                     <span className={`absolute -top-1.5 left-1/2 -translate-x-1/2 rounded px-1.5 py-0.5 text-[10px] font-black ${ratingColor(player.avg)}`}>{player.avg.toFixed(2)}</span>
                   </span>
@@ -240,7 +240,7 @@ function Squad({ team, canManage }: { team: PublicTeam; canManage: boolean }) {
       {team.players.map((player, i) => (
         <div key={player.id} className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-4 border-b border-white/8 p-5 transition last:border-0 hover:bg-white/[.03]">
           <div style={player.imageUrl ? { backgroundImage: `url(${player.imageUrl})` } : undefined} className="grid size-14 place-items-center rounded-2xl bg-[#00c281] bg-cover bg-center font-black text-[#04120c]" role={player.imageUrl ? "img" : undefined} aria-label={player.imageUrl ? `${player.displayName || player.intraLogin || player.firstName} profile photo` : undefined}>
-            {player.imageUrl ? null : `${player.firstName[0] ?? ""}${player.lastName[0] ?? ""}`.toUpperCase()}
+            {player.imageUrl ? null : <Icon name="player" size={26} />}
           </div>
           <div>
             <b>{player.displayName || `${player.firstName} ${player.lastName}`}</b>
