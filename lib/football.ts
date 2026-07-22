@@ -108,7 +108,8 @@ export async function getPublicTeam(slug: string) {
   return prisma.team.findUnique({
     where: { slug },
     include: {
-      players: { orderBy: [{ shirtNumber: "asc" }, { lastName: "asc" }], include: { matchStats: true } },
+      // The match result is needed to know each rating's base (win 6 / loss 5.5).
+      players: { orderBy: [{ shirtNumber: "asc" }, { lastName: "asc" }], include: { matchStats: { include: { match: { select: { homeTeamId: true, result: true } } } } } },
       competitions: { include: { competition: { select: { name: true, slug: true, status: true } } } },
       homeMatches: matchInclude,
       awayMatches: matchInclude,

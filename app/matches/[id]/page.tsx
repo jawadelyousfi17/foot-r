@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { LineupRole, PlayerPosition } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { statKeys, type StatValues } from "@/lib/match-stats";
-import { calculatePlayerRating, ratingColor } from "@/lib/player-rating";
+import { emptyStats, statKeys, type StatValues } from "@/lib/match-stats";
+import { calculatePlayerRating, matchOutcome, ratingColor } from "@/lib/player-rating";
 import { Icon, type IconName } from "@/components/icon";
 import { MatchClock } from "@/components/match-clock";
 import { FollowButton, MatchCountdown, MatchTabsProvider, MatchTabsNav, MatchTabsContent, WhoWillWin } from "@/components/match-hero";
@@ -33,8 +33,39 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const date = match.scheduledAt;
   const stage = match.group?.name ?? (match.round ? knockoutRound(match.round) : "Knockout");
   const total = (teamId: string, key: "passes" | "accuratePasses" | "shots" | "shotsOnTarget" | "saves" | "fouls" | "corners" | "tackles") => match.playerStats.filter((row) => row.teamId === teamId).reduce((sum, row) => sum + row[key], 0);
-  const ratings = new Map(match.playerStats.map((row) => [row.playerId, calculatePlayerRating(Object.fromEntries(statKeys.map((key) => [key, row[key]])) as StatValues)]));
+  // Once a match is under way every squad member carries a rating, so a player
+  // who neither scored nor assisted still shows the base for their team's result.
+  const outcomeOf = (teamId: string) => {
+    if (!match.result) return undefined;
+    const [scored, conceded] = teamId === match.homeTeamId
+      ? [match.result.homeScore, match.result.awayScore]
+      : [match.result.awayScore, match.result.homeScore];
+    return matchOutcome(scored, conceded);
+  };
+  const rated = played || match.playerStats.length > 0;
+  const ratings = new Map<string, number>();
+  if (rated) {
+    for (const [team, teamId] of [[match.homeTeam, match.homeTeamId], [match.awayTeam, match.awayTeamId]] as const) {
+      for (const player of team.players) {
+        const row = match.playerStats.find((entry) => entry.playerId === player.id);
+        const stats = row ? Object.fromEntries(statKeys.map((key) => [key, row[key]])) as StatValues : emptyStats();
+        ratings.set(player.id, calculatePlayerRating(stats, outcomeOf(teamId)));
+      }
+    }
+  }
   const contributions = new Map(match.playerStats.map((row) => [row.playerId, { goals: row.goals, assists: row.assists }]));
+
+  // Exactly one man of the match: the best rating across both squads. Ties break
+  // on goals, then assists, then id so the pick is stable between renders.
+  const mvpId = played
+    ? [...ratings.entries()]
+        .filter(([playerId]) => match.playerStats.some((row) => row.playerId === playerId))
+        .sort(([aId, aRating], [bId, bRating]) =>
+          bRating - aRating
+          || (contributions.get(bId)?.goals ?? 0) - (contributions.get(aId)?.goals ?? 0)
+          || (contributions.get(bId)?.assists ?? 0) - (contributions.get(aId)?.assists ?? 0)
+          || aId.localeCompare(bId))[0]?.[0] ?? null
+    : null;
 
   const kickoffTime = date ? new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(date) : "TBD";
   const live = ["FIRST_HALF", "SECOND_HALF", "EXTRA_TIME", "PENALTIES", "IN_PROGRESS"].includes(match.status);
@@ -70,7 +101,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const matchTabs = [
     {
       label: "Lineups",
-      content: <MatchLineups matchId={match.id} homeTeam={match.homeTeam} awayTeam={match.awayTeam} ratings={ratings} contributions={contributions} lineupEntries={match.lineupEntries} />,
+      content: <MatchLineups matchId={match.id} homeTeam={match.homeTeam} awayTeam={match.awayTeam} ratings={ratings} contributions={contributions} lineupEntries={match.lineupEntries} mvpId={mvpId} />,
     },
     { label: "Statistics", content: <div className="rounded-2xl bg-[#1b1b1b] p-4 sm:p-0">{statistics}</div> },
     {
@@ -236,7 +267,7 @@ function TeamLogo({ team }: { team: NonNullable<TeamWithPlayers> }) {
   return team.logoUrl ? <span className="block size-11 shrink-0 rounded-full bg-white bg-cover bg-center bg-no-repeat ring-2 ring-white/15 md:size-14" style={{ backgroundImage: `url(${team.logoUrl})` }} /> : <span className="grid size-11 shrink-0 place-items-center rounded-full bg-white/10 text-sm font-black ring-2 ring-white/15 md:size-14">{team.shortName?.slice(0, 3) || team.name.slice(0, 2).toUpperCase()}</span>;
 }
 
-function MatchLineups({ matchId, homeTeam, awayTeam, ratings, contributions, lineupEntries }: { matchId: string; homeTeam: NonNullable<TeamWithPlayers>; awayTeam: NonNullable<TeamWithPlayers>; ratings: Map<string, number>; contributions: Map<string, Contribution>; lineupEntries: Array<{ playerId: string; teamId: string; role: LineupRole; position: number | null }> }) {
+function MatchLineups({ matchId, homeTeam, awayTeam, ratings, contributions, lineupEntries, mvpId }: { matchId: string; homeTeam: NonNullable<TeamWithPlayers>; awayTeam: NonNullable<TeamWithPlayers>; ratings: Map<string, number>; contributions: Map<string, Contribution>; lineupEntries: Array<{ playerId: string; teamId: string; role: LineupRole; position: number | null }>; mvpId: string | null }) {
   const home = selectLineup(homeTeam.players, `${matchId}-${homeTeam.id}`, lineupEntries.filter((entry) => entry.teamId === homeTeam.id));
   const away = selectLineup(awayTeam.players, `${matchId}-${awayTeam.id}`, lineupEntries.filter((entry) => entry.teamId === awayTeam.id));
   const homePositions = [[7, 50], [27, 27], [27, 73], [42, 32], [42, 68]];
@@ -260,30 +291,30 @@ function MatchLineups({ matchId, homeTeam, awayTeam, ratings, contributions, lin
         <div className="absolute right-0 top-1/2 h-[50%] w-[13%] -translate-y-1/2 border-y-[3px] border-l-[3px] border-[#3a3a3a]" />
         <div className="absolute left-0 top-1/2 h-[25%] w-[6%] -translate-y-1/2 border-y-[3px] border-r-[3px] border-[#3a3a3a]" />
         <div className="absolute right-0 top-1/2 h-[25%] w-[6%] -translate-y-1/2 border-y-[3px] border-l-[3px] border-[#3a3a3a]" />
-        {home.starters.map((player, index) => <PitchPlayer key={player.id} player={player} contribution={contributions.get(player.id)} rating={ratings.get(player.id)} x={homePositions[index][0]} y={homePositions[index][1]} />)}
-        {away.starters.map((player, index) => <PitchPlayer key={player.id} player={player} contribution={contributions.get(player.id)} rating={ratings.get(player.id)} x={awayPositions[index][0]} y={awayPositions[index][1]} />)}
+        {home.starters.map((player, index) => <PitchPlayer key={player.id} player={player} contribution={contributions.get(player.id)} rating={ratings.get(player.id)} mvp={player.id === mvpId} x={homePositions[index][0]} y={homePositions[index][1]} />)}
+        {away.starters.map((player, index) => <PitchPlayer key={player.id} player={player} contribution={contributions.get(player.id)} rating={ratings.get(player.id)} mvp={player.id === mvpId} x={awayPositions[index][0]} y={awayPositions[index][1]} />)}
       </div>
       {/* Two vertical half-pitches — mobile */}
       <div className="sm:hidden">
-        <HalfPitch team={homeTeam} players={home.starters} ratings={ratings} contributions={contributions} />
-        <HalfPitch team={awayTeam} players={away.starters} ratings={ratings} contributions={contributions} flip />
+        <HalfPitch team={homeTeam} players={home.starters} ratings={ratings} contributions={contributions} mvpId={mvpId} />
+        <HalfPitch team={awayTeam} players={away.starters} ratings={ratings} contributions={contributions} mvpId={mvpId} flip />
       </div>
     </div>
     <div className="grid gap-5 md:grid-cols-2">
-      <Bench team={homeTeam} players={home.bench} ratings={ratings} contributions={contributions} />
-      <Bench team={awayTeam} players={away.bench} ratings={ratings} contributions={contributions} />
+      <Bench team={homeTeam} players={home.bench} ratings={ratings} contributions={contributions} mvpId={mvpId} />
+      <Bench team={awayTeam} players={away.bench} ratings={ratings} contributions={contributions} mvpId={mvpId} />
     </div>
   </div>;
 }
 
-function HalfPitch({ team, players, ratings, contributions, flip }: { team: NonNullable<TeamWithPlayers>; players: Player[]; ratings: Map<string, number>; contributions: Map<string, Contribution>; flip?: boolean }) {
+function HalfPitch({ team, players, ratings, contributions, mvpId, flip }: { team: NonNullable<TeamWithPlayers>; players: Player[]; ratings: Map<string, number>; contributions: Map<string, Contribution>; mvpId: string | null; flip?: boolean }) {
   // GK near own goal, outfield pushed up the pitch. Away team (flip) attacks downward.
   // GK near own goal line, outfield pushed up. flip => own goal at top (attacks down).
   const spots = flip ? [[50, 14], [24, 42], [76, 42], [36, 74], [64, 74]] : [[50, 86], [24, 58], [76, 58], [36, 26], [64, 26]];
   return (
     <div className="relative aspect-[5/4] w-full overflow-hidden border-t-2 border-[#171717] bg-[#2c2c2c]">
       <span className={`absolute left-3 z-20 flex max-w-[70%] items-center gap-2 text-xs font-medium text-white/70 ${flip ? "top-3" : "bottom-3"}`}><TeamMini team={team} /></span>
-      {players.map((player, index) => <PitchPlayer key={player.id} player={player} contribution={contributions.get(player.id)} rating={ratings.get(player.id)} x={spots[index]?.[0] ?? 50} y={spots[index]?.[1] ?? 50} />)}
+      {players.map((player, index) => <PitchPlayer key={player.id} player={player} contribution={contributions.get(player.id)} rating={ratings.get(player.id)} mvp={player.id === mvpId} x={spots[index]?.[0] ?? 50} y={spots[index]?.[1] ?? 50} />)}
     </div>
   );
 }
@@ -309,17 +340,17 @@ function seededValue(value: string) {
 
 type Contribution = { goals: number; assists: number };
 
-function PitchPlayer({ player, rating, contribution, x, y }: { player: Player; rating?: number; contribution?: Contribution; x: number; y: number }) {
+function PitchPlayer({ player, rating, contribution, mvp, x, y }: { player: Player; rating?: number; contribution?: Contribution; mvp?: boolean; x: number; y: number }) {
   const name = player.displayName || player.lastName || player.firstName;
-  return <div className="absolute z-10 flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={{ left: `${x}%`, top: `${y}%` }}><span className="relative"><span className="relative grid size-11 place-items-center overflow-hidden rounded-full bg-[#4c4c4c] shadow-md md:size-[3.75rem]">{player.imageUrl ? <span className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${player.imageUrl})` }} /> : <b className="text-white">{player.shirtNumber ?? "—"}</b>}</span>{rating !== undefined && <span className={`absolute -right-3 -top-1.5 grid h-[1.35rem] min-w-[2.4rem] place-items-center rounded-full px-1.5 text-[11px] font-black shadow ${ratingColor(rating)}`}>{rating.toFixed(1)}{rating >= 9 && <b className="ml-0.5">★</b>}</span>}</span><span className="mt-2 max-w-full truncate px-1 text-center text-[11px] font-normal text-[#f3f3f3] md:text-xs"><span className="mr-1 text-[#b4b4b4]">{player.shirtNumber ?? ""}</span>{name}</span><Contributions value={contribution} /></div>;
+  return <div className="absolute z-10 flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={{ left: `${x}%`, top: `${y}%` }}><span className="relative"><span className={`relative grid size-11 place-items-center overflow-hidden rounded-full bg-[#4c4c4c] shadow-md md:size-[3.75rem] ${mvp ? "ring-2 ring-[#d7ff3f]" : ""}`}>{player.imageUrl ? <span className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${player.imageUrl})` }} /> : <b className="text-white">{player.shirtNumber ?? "—"}</b>}</span>{mvp && <span className="absolute -left-2 -top-1.5 grid size-5 place-items-center rounded-full bg-[#d7ff3f] text-[10px] font-black text-black shadow" title="Man of the match">★</span>}{rating !== undefined && <span className={`absolute -right-3 -top-1.5 grid h-[1.35rem] min-w-[2.4rem] place-items-center rounded-full px-1.5 text-[11px] font-black shadow ${ratingColor(rating)}`}>{rating.toFixed(1)}</span>}</span><span className="mt-2 max-w-full truncate px-1 text-center text-[11px] font-normal text-[#f3f3f3] md:text-xs"><span className="mr-1 text-[#b4b4b4]">{player.shirtNumber ?? ""}</span>{name}</span><Contributions value={contribution} /></div>;
 }
 
 function TeamMini({ team, away }: { team: NonNullable<TeamWithPlayers>; away?: boolean }) {
   return <div className={`flex min-w-0 items-center gap-2 ${away ? "flex-row-reverse text-right" : ""}`}><span className="size-8 shrink-0 rounded-full bg-white bg-contain bg-center bg-no-repeat" style={team.logoUrl ? { backgroundImage: `url(${team.logoUrl})` } : undefined} /><span className="truncate">{team.name}</span></div>;
 }
 
-function Bench({ team, players, ratings, contributions }: { team: NonNullable<TeamWithPlayers>; players: Player[]; ratings: Map<string, number>; contributions: Map<string, Contribution> }) {
-  return <section className="rounded-xl bg-[#292929] p-4"><div className="mb-3 flex items-center justify-between"><h3 className="font-black text-white">{team.name} bench</h3><Badge className="bg-white/10 text-white">{players.length}</Badge></div><div className="space-y-1">{players.map((player) => { const rating=ratings.get(player.id); return <div key={player.id} className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-2 rounded-lg px-2 py-2 text-white hover:bg-white/5"><span className="size-8 rounded-full bg-[#444] bg-cover bg-center" style={player.imageUrl ? { backgroundImage: `url(${player.imageUrl})` } : undefined} /><span className="truncate text-sm font-semibold">{player.displayName || `${player.firstName} ${player.lastName}`}</span><Contributions value={contributions.get(player.id)} />{rating !== undefined ? <span className={`rounded px-1.5 py-0.5 text-[10px] font-black ${ratingColor(rating)}`}>{rating.toFixed(1)}</span> : <span />}</div>})}{!players.length && <p className="py-3 text-center text-sm text-white/40">No substitutes.</p>}</div></section>;
+function Bench({ team, players, ratings, contributions, mvpId }: { team: NonNullable<TeamWithPlayers>; players: Player[]; ratings: Map<string, number>; contributions: Map<string, Contribution>; mvpId: string | null }) {
+  return <section className="rounded-xl bg-[#292929] p-4"><div className="mb-3 flex items-center justify-between"><h3 className="font-black text-white">{team.name} bench</h3><Badge className="bg-white/10 text-white">{players.length}</Badge></div><div className="space-y-1">{players.map((player) => { const rating=ratings.get(player.id); return <div key={player.id} className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-2 rounded-lg px-2 py-2 text-white hover:bg-white/5"><span className="size-8 rounded-full bg-[#444] bg-cover bg-center" style={player.imageUrl ? { backgroundImage: `url(${player.imageUrl})` } : undefined} /><span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold">{player.displayName || `${player.firstName} ${player.lastName}`}{player.id === mvpId && <span className="shrink-0 rounded bg-[#d7ff3f] px-1 text-[10px] font-black text-black" title="Man of the match">★</span>}</span><Contributions value={contributions.get(player.id)} />{rating !== undefined ? <span className={`rounded px-1.5 py-0.5 text-[10px] font-black ${ratingColor(rating)}`}>{rating.toFixed(1)}</span> : <span />}</div>})}{!players.length && <p className="py-3 text-center text-sm text-white/40">No substitutes.</p>}</div></section>;
 }
 
 function Contributions({ value }: { value?: Contribution }) {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/icon";
+import { SiteSearch } from "@/components/site-search";
 
 const LINKS = [
   { href: "/", label: "News" },
@@ -33,6 +34,7 @@ export function MobileNav({ authed, signOutAction }: { authed: boolean; signOutA
           <button aria-hidden="true" tabIndex={-1} onClick={() => setOpen(false)} className="fixed inset-0 top-16 z-40 bg-black/60 backdrop-blur-sm" />
           <nav className="absolute inset-x-0 top-full z-50 border-b border-white/8 bg-[#111] p-4 shadow-2xl shadow-black/50">
             <div className="mx-auto flex max-w-7xl flex-col gap-1">
+              <div className="pb-2"><SiteSearch onNavigate={() => setOpen(false)} /></div>
               {LINKS.map((link) => (
                 <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 text-base font-medium text-white/80 transition hover:bg-white/5 hover:text-white">
                   {link.label}

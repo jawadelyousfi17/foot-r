@@ -40,11 +40,22 @@ type Competition = {
 
 const dayKey = (value: string) => value.slice(0, 10);
 
-// Day key for "today + offset" (UTC-consistent with dayKey above).
-function offsetDayKey(offset: number) {
-  const base = new Date();
-  base.setUTCDate(base.getUTCDate() + offset);
-  return base.toISOString().slice(0, 10);
+type Match = Competition["matches"][number];
+
+// A match counts as played once it has a result or has been marked completed.
+const isPlayed = (match: Match) => Boolean(match.result) || match.status === "COMPLETED";
+
+// Consecutive matches sharing a calendar day become one dated section. The list
+// is already sorted, so same-day matches are guaranteed to be adjacent.
+function groupByDay(matches: Match[]) {
+  const groups: Array<{ key: string; label: string; matches: Match[] }> = [];
+  for (const match of matches) {
+    const key = match.scheduledAt ? dayKey(match.scheduledAt) : "tbd";
+    const current = groups.at(-1);
+    if (current?.key === key) current.matches.push(match);
+    else groups.push({ key, label: key === "tbd" ? "Date to be confirmed" : dateLabel(key), matches: [match] });
+  }
+  return groups;
 }
 
 function TeamMark({ team }: { team: { name: string; logoUrl: string | null } }) {
@@ -75,13 +86,22 @@ function dateLabel(key: string) {
 
 export function HomeMatchCenter({ competitions }: { competitions: Competition[] }) {
   const [view, setView] = useState<"matches" | "standings" | "knockout">("matches");
-  const [dayOffset, setDayOffset] = useState(0);
+  const [timeline, setTimeline] = useState<"upcoming" | "passed">("upcoming");
   const competition = competitions[0];
 
-  const selectedKey = offsetDayKey(dayOffset);
+  const passed = timeline === "passed";
+  // Upcoming runs soonest-first; passed runs most-recent-first. Undated matches
+  // sit at the end of either list.
   const visibleMatches = (competition?.matches ?? [])
-    .filter((match) => match.scheduledAt && dayKey(match.scheduledAt) === selectedKey)
-    .sort((left, right) => (left.scheduledAt ?? "").localeCompare(right.scheduledAt ?? ""));
+    .filter((match) => isPlayed(match) === passed)
+    .sort((left, right) => {
+      if (!left.scheduledAt) return 1;
+      if (!right.scheduledAt) return -1;
+      return passed
+        ? right.scheduledAt.localeCompare(left.scheduledAt)
+        : left.scheduledAt.localeCompare(right.scheduledAt);
+    });
+  const dayGroups = groupByDay(visibleMatches);
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-black px-3 py-5 text-white sm:px-5 sm:py-8">
@@ -110,28 +130,32 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
 
         {view === "matches" ? (
           <section className="mt-5 space-y-5">
-            {/* Date nav + filter chips (FotMob-style) */}
-            <div className="overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#1b1b1b]">
-              <div className="flex items-center justify-between border-b border-white/8 px-4 py-3.5">
-                <button onClick={() => setDayOffset((value) => value - 1)} aria-label="Previous day" className="grid size-9 place-items-center rounded-full bg-white/8 text-white/70 transition hover:bg-white/15"><Icon name="chevronLeft" size={18} /></button>
-                <button onClick={() => setDayOffset(0)} className="flex items-center gap-1.5 text-base font-bold" title="Back to today">
-                  {dateLabel(selectedKey)}
-                  {dayOffset !== 0 && <span className="text-xs font-medium text-white/40">· tap to reset</span>}
+            {/* Upcoming / passed switch */}
+            <div className="flex gap-1 rounded-full border border-white/10 bg-[#1b1b1b] p-1">
+              {(["upcoming", "passed"] as const).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setTimeline(option)}
+                  aria-pressed={timeline === option}
+                  className={`flex-1 rounded-full py-2.5 text-sm font-bold capitalize transition ${timeline === option ? "bg-[#61df6e] text-black" : "text-white/60 hover:text-white"}`}
+                >
+                  {option}
                 </button>
-                <button onClick={() => setDayOffset((value) => value + 1)} aria-label="Next day" className="grid size-9 place-items-center rounded-full bg-white/8 text-white/70 transition hover:bg-white/15"><Icon name="chevronRight" size={18} /></button>
-              </div>
+              ))}
             </div>
 
-            {visibleMatches.length > 0 && (
-              <div className="overflow-hidden rounded-3xl bg-[#1d1d1d]">
-                <div>
-                  {visibleMatches.map((match) => {
+            {dayGroups.map((group) => (
+              <div key={group.key}>
+                <p className="px-1 pb-2 text-sm font-bold text-white/50">{group.label}</p>
+                <div className="overflow-hidden rounded-3xl bg-[#1d1d1d]">
+                  {group.matches.map((match) => {
                     const live = ["FIRST_HALF", "SECOND_HALF", "HALF_TIME", "EXTRA_TIME", "PENALTIES", "IN_PROGRESS"].includes(match.status);
                     const done = Boolean(match.result) || match.status === "COMPLETED";
                     const time = match.scheduledAt ? new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(match.scheduledAt)) : "TBD";
                     return (
                       <Link href={`/matches/${match.id}`} key={match.id} className="flex items-center gap-2 border-t border-[#2a2a2a] px-3 py-4 transition first:border-t-0 hover:bg-white/[.03] sm:px-5">
-                        <span className="grid h-8 w-11 shrink-0 place-items-center text-[10px] font-bold text-white/60">
+                        {/* On mobile only LIVE earns the space; FT is implied by the score. */}
+                        <span className={`h-8 w-11 shrink-0 place-items-center text-[10px] font-bold text-white/60 sm:grid ${live ? "grid" : "hidden"}`}>
                           {live ? <span className="rounded-full bg-[#dd3636]/15 px-2 py-1 text-[#ff6a6a]">LIVE</span> : done ? <span className="rounded-full bg-[#393939] px-2 py-1">FT</span> : null}
                         </span>
                         <div className="grid flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
@@ -147,14 +171,18 @@ export function HomeMatchCenter({ competitions }: { competitions: Competition[] 
                             <span className="text-sm font-medium leading-tight sm:truncate sm:text-base">{match.awayTeam.name}</span>
                           </span>
                         </div>
-                        <span className="w-11 shrink-0" />
+                        <span className="hidden w-11 shrink-0 sm:block" />
                       </Link>
                     );
                   })}
                 </div>
               </div>
+            ))}
+            {!visibleMatches.length && (
+              passed
+                ? <EmptyState title="No matches played yet" body="Finished matches will be listed here, grouped by the day they were played." />
+                : <EmptyState title="No upcoming matches" body="Scheduled fixtures will appear here, grouped by matchday." />
             )}
-            {!visibleMatches.length && <EmptyState title={`No matches on ${dateLabel(selectedKey)}`} body="No fixtures for this day. Use the arrows to browse other days." />}
           </section>
         ) : view === "standings" ? (
           <section className="mt-5 space-y-5">

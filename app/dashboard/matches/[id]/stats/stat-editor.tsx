@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { emptyStats, statGroups, type StatKey, type StatValues } from "@/lib/match-stats";
-import { calculatePlayerRating, ratingColor } from "@/lib/player-rating";
+import { calculatePlayerRating, matchOutcome, ratingColor } from "@/lib/player-rating";
 import { Check, Clock3, Maximize2, Minimize2, Minus, Plus, RotateCcw, Save, Zap } from "@/components/icon";
 import { saveTeamStats } from "./actions";
 
@@ -51,6 +51,8 @@ export function StatEditor({ matchId, homeTeam, awayTeam }: { matchId: string; h
   const player = team.players.find((item) => item.id === playerId) ?? team.players[0];
   const totals = useMemo(() => team.players.reduce((sum, item) => sum + Object.values(values[item.id] ?? emptyStats()).reduce((a, b) => a + b, 0), 0), [team, values]);
   const teamGoals = (target: Team) => target.players.reduce((sum, item) => sum + (values[item.id]?.goals ?? 0), 0);
+  // Rating previews use the live score, so the base shifts as the game turns.
+  const outcome = matchOutcome(teamGoals(team), teamGoals(team.id === homeTeam.id ? awayTeam : homeTeam));
 
   useEffect(() => {
     const handleFullscreen = () => setFullscreen(document.fullscreenElement === editorRef.current);
@@ -123,13 +125,13 @@ export function StatEditor({ matchId, homeTeam, awayTeam }: { matchId: string; h
 
     <Card>
       <CardHeader><CardTitle className="flex items-center justify-between">1. Select player <Badge variant="secondary">{team.players.length}</Badge></CardTitle></CardHeader>
-      <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">{team.players.map((item) => { const rating=calculatePlayerRating(values[item.id] ?? emptyStats()); return <button key={item.id} type="button" onClick={() => setPlayerId(item.id)} className={`relative flex items-center gap-2 rounded-xl border p-2 text-left ${item.id === player?.id ? "border-black bg-[#d7ff3f] ring-2 ring-black" : "hover:bg-muted"}`}><span className="size-10 shrink-0 rounded-full bg-muted bg-cover bg-center" style={item.imageUrl ? { backgroundImage: `url(${item.imageUrl})` } : undefined} /><span className="min-w-0"><b className="block truncate pr-7 text-sm">{item.name}</b><small>#{item.number ?? "—"}</small></span><span className={`absolute right-2 top-2 rounded px-1.5 py-0.5 text-[10px] font-black ${ratingColor(rating)}`}>{rating.toFixed(1)}</span></button>})}</CardContent>
+      <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">{team.players.map((item) => { const rating=calculatePlayerRating(values[item.id] ?? emptyStats(), outcome); return <button key={item.id} type="button" onClick={() => setPlayerId(item.id)} className={`relative flex items-center gap-2 rounded-xl border p-2 text-left ${item.id === player?.id ? "border-black bg-[#d7ff3f] ring-2 ring-black" : "hover:bg-muted"}`}><span className="size-10 shrink-0 rounded-full bg-muted bg-cover bg-center" style={item.imageUrl ? { backgroundImage: `url(${item.imageUrl})` } : undefined} /><span className="min-w-0"><b className="block truncate pr-7 text-sm">{item.name}</b><small>#{item.number ?? "—"}</small></span><span className={`absolute right-2 top-2 rounded px-1.5 py-0.5 text-[10px] font-black ${ratingColor(rating)}`}>{rating.toFixed(1)}</span></button>})}</CardContent>
     </Card>
 
     {player ? <div className={fullscreen ? "" : "grid gap-5 xl:grid-cols-[1fr_20rem]"}>
       <div className="space-y-5">
         <Card className="border-black bg-[#151712] text-white">
-          <CardHeader><CardTitle className="flex flex-wrap items-center justify-between gap-3"><span className="flex items-center gap-2"><Zap className="size-5 text-[#d7ff3f]" />2. Tap the event for {player.name}</span><span className="flex items-center gap-2"><span className={`rounded-lg px-3 py-1 text-sm font-black ${ratingColor(calculatePlayerRating(values[player.id] ?? emptyStats()))}`}>Rating {calculatePlayerRating(values[player.id] ?? emptyStats()).toFixed(1)}</span><Badge className="bg-white/10 text-white">{totals} team actions</Badge></span></CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex flex-wrap items-center justify-between gap-3"><span className="flex items-center gap-2"><Zap className="size-5 text-[#d7ff3f]" />2. Tap the event for {player.name}</span><span className="flex items-center gap-2"><span className={`rounded-lg px-3 py-1 text-sm font-black ${ratingColor(calculatePlayerRating(values[player.id] ?? emptyStats(), outcome))}`}>Rating {calculatePlayerRating(values[player.id] ?? emptyStats(), outcome).toFixed(1)}</span><Badge className="bg-white/10 text-white">{totals} team actions</Badge></span></CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">{quickEvents.map((event) => <Button key={event.label} type="button" size="lg" onClick={() => record(event.label, event.changes)} className={`h-14 justify-start text-sm font-black ${event.accent ?? "bg-white text-black hover:bg-white/85"}`}><Plus className="size-4" />{event.label}</Button>)}</CardContent>
         </Card>
 

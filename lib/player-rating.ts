@@ -1,7 +1,14 @@
 import type { StatValues } from "@/lib/match-stats";
 
-export function calculatePlayerRating(stats: StatValues) {
-  const score = 6
+export type MatchOutcome = "win" | "draw" | "loss";
+
+// The result the player's team got sets their starting point: winners begin
+// above the losers before a single event is counted. A draw sits midway.
+const baseRating: Record<MatchOutcome, number> = { win: 6, draw: 5.75, loss: 5.5 };
+
+// Outcome is optional so an unfinished match still rates from a neutral 6.
+export function calculatePlayerRating(stats: StatValues, outcome?: MatchOutcome) {
+  const score = (outcome ? baseRating[outcome] : 6)
     + stats.goals * 1.25
     + stats.assists * 0.8
     + stats.shotsOnTarget * 0.08
@@ -20,10 +27,18 @@ export function calculatePlayerRating(stats: StatValues) {
   return Math.round(Math.min(10, Math.max(3, score)) * 10) / 10;
 }
 
-// FotMob rating scale: green (good) → orange (mid) → red (poor), black label.
+export function matchOutcome(scored: number, conceded: number): MatchOutcome {
+  if (scored > conceded) return "win";
+  if (scored < conceded) return "loss";
+  return "draw";
+}
+
+// Anything below 7 is a plain black badge; from 7 up the green gets brighter
+// the higher the rating, so standout performances read at a glance. The ring
+// keeps the black badge legible on the dark match pages.
 export function ratingColor(rating: number) {
-  if (rating >= 8) return "bg-[#00985f] text-black";
-  if (rating >= 7) return "bg-[#33c771] text-black";
-  if (rating >= 6) return "bg-[#ff963f] text-black";
-  return "bg-[#ff3939] text-black";
+  if (rating >= 9) return "bg-[#d7ff3f] text-black";
+  if (rating >= 8) return "bg-[#5cf08a] text-black";
+  if (rating >= 7) return "bg-[#1f9d57] text-white";
+  return "bg-[#1c1c1c] text-white ring-1 ring-white/25";
 }

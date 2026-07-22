@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getPublicTeam } from "@/lib/football";
 import { statKeys, type StatValues } from "@/lib/match-stats";
-import { calculatePlayerRating, ratingColor } from "@/lib/player-rating";
+import { calculatePlayerRating, matchOutcome, ratingColor } from "@/lib/player-rating";
 import { Icon } from "@/components/icon";
 import { FollowButton } from "@/components/match-hero";
 import { TeamTabs } from "@/components/team-tabs";
@@ -46,7 +46,15 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
   const rated: Rated[] = team.players
     .map((player) => {
       const apps = player.matchStats.length;
-      const ratings = player.matchStats.map((stat) => calculatePlayerRating(Object.fromEntries(statKeys.map((key) => [key, stat[key]])) as StatValues));
+      const ratings = player.matchStats.map((stat) => {
+        const values = Object.fromEntries(statKeys.map((key) => [key, stat[key]])) as StatValues;
+        const result = stat.match.result;
+        if (!result) return calculatePlayerRating(values);
+        const [scored, conceded] = stat.teamId === stat.match.homeTeamId
+          ? [result.homeScore, result.awayScore]
+          : [result.awayScore, result.homeScore];
+        return calculatePlayerRating(values, matchOutcome(scored, conceded));
+      });
       return {
         id: player.id,
         name: player.displayName || player.lastName || player.firstName,

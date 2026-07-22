@@ -4,6 +4,7 @@ import NextTopLoader from "nextjs-toploader";
 import { auth, signOut } from "@/lib/auth";
 import { Icon } from "@/components/icon";
 import { MobileNav } from "@/components/mobile-nav";
+import { SiteSearch } from "@/components/site-search";
 import { DesktopModeBanner } from "@/components/desktop-mode-banner";
 import "./globals.css";
 
@@ -35,16 +36,9 @@ export default async function RootLayout({
               <img src="/logo.png" alt="Foot-R" className="h-8 w-auto lg:h-9" />
             </Link>
 
-            <label className="relative hidden max-w-md flex-1 items-center md:flex">
-              <span className="pointer-events-none absolute left-4 text-white/40">
-                <Icon name="search" size={18} />
-              </span>
-              <input
-                type="search"
-                placeholder="Search"
-                className="h-11 w-full rounded-full border border-white/5 bg-white/[.06] pl-11 pr-4 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/15 focus:bg-white/10"
-              />
-            </label>
+            <div className="hidden max-w-md flex-1 md:block">
+              <SiteSearch />
+            </div>
 
             <nav className="ml-auto hidden items-center gap-7 text-sm font-bold text-white/70 lg:flex">
               <Link href="/" className="transition hover:text-white">News</Link>
